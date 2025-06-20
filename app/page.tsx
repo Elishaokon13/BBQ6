@@ -1,19 +1,12 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { encodeFunctionData, erc20Abi, parseUnits } from "viem"
+import React, { useEffect, useState } from "react"
+import { encodeFunctionData, parseEther } from "viem"
 import { useConnect, useSendCalls, useAccount, useDisconnect } from "wagmi"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, CheckCircle, XCircle, Wallet, Users, Trophy } from "lucide-react"
-import Link from "next/link"
-
-interface DataRequest {
-  email: boolean
-  address: boolean
-}
+import { Button } from "../components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
+import { Alert, AlertDescription } from "../components/ui/alert"
+import { Loader2, CheckCircle, XCircle, Wallet, ShoppingBag, Sparkles } from "lucide-react"
 
 interface ProfileResult {
   success: boolean
@@ -22,26 +15,41 @@ interface ProfileResult {
   error?: string
 }
 
+const MERCH_ITEMS = [
+  {
+    id: 1,
+    name: "Pixel Hoodie",
+    price: "0.0001",
+    description: "Limited edition pixel art hoodie with glow-in-dark print",
+    image: "🧥"
+  },
+  {
+    id: 2,
+    name: "Cyber Cap",
+    price: "0.0001",
+    description: "RGB-enabled cap with programmable LED display",
+    image: "🧢"
+  },
+  {
+    id: 3,
+    name: "Matrix Tee",
+    price: "0.0001",
+    description: "Digital rain pattern t-shirt with AR effects",
+    image: "👕"
+  }
+]
+
 export default function HomePage() {
   const { address, isConnected } = useAccount()
   const { connect, connectors } = useConnect()
   const { disconnect } = useDisconnect()
   const { sendCalls, data, error, isPending } = useSendCalls()
-
-  const [dataToRequest, setDataToRequest] = useState<DataRequest>({
-    email: true,
-    address: true,
-  })
+  const [selectedItem, setSelectedItem] = useState(MERCH_ITEMS[0])
   const [result, setResult] = useState<ProfileResult | null>(null)
-
-  // Function to get callback URL - replace with your ngrok URL
-  function getCallbackURL() {
-    return "https://kzmjoumrqc5kb6l6p9bf.lite.vusercontent.net/api/data-validation"
-  }
 
   // Handle response data when sendCalls completes
   useEffect(() => {
-    if (data?.capabilities?.dataCallback) {
+          if (data?.capabilities?.dataCallback) {
       const callbackData = data.capabilities.dataCallback
       const newResult: ProfileResult = { success: true }
 
@@ -58,7 +66,7 @@ export default function HomePage() {
 
       setResult(newResult)
     } else if (data && !data.capabilities?.dataCallback) {
-      setResult({ success: false, error: "Invalid response - no data callback" })
+      setResult({ success: false, error: "Transaction failed" })
     }
   }, [data])
 
@@ -72,40 +80,33 @@ export default function HomePage() {
     }
   }, [error])
 
-  // Handle form submission
-  async function handleSubmit() {
+  // Handle purchase
+  async function handlePurchase() {
     try {
       setResult(null)
-
-      // Build requests array based on checkboxes
-      const requests = []
-      if (dataToRequest.email) requests.push({ type: "email", optional: false })
-      if (dataToRequest.address) requests.push({ type: "physicalAddress", optional: false })
-
-      if (requests.length === 0) {
-        setResult({ success: false, error: "Select at least one data type" })
-        return
-      }
-
+      
       // Send calls using wagmi hook
+      // Build requests array for profile data
+      const requests = [
+        { type: "email", optional: false },
+        { type: "physicalAddress", optional: false }
+      ];
+
       sendCalls({
         connector: connectors[0],
-        account: null,
+        account: address,
         calls: [
           {
-            to: "0x036CbD53842c5426634e7929541eC2318f3dCF7e", // USDC contract address on Base Sepolia
-            data: encodeFunctionData({
-              abi: erc20Abi,
-              functionName: "transfer",
-              args: ["0xd8da6bf26964af9d7eed9e03e53415d37aa96045", parseUnits("0.01", 6)],
-            }),
+            to: "0x1B958A48373109E9146A950a75F5bD25B845143b",
+            value: parseEther(selectedItem.price),
+            data: "0x",
           },
         ],
         chainId: 84532, // Base Sepolia
         capabilities: {
           dataCallback: {
             requests: requests,
-            callbackURL: getCallbackURL(),
+            callbackURL: "https://5e90-194-116-208-73.ngrok-free.app/api/data-validation",
           },
         },
       })
@@ -118,21 +119,24 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-cyber-black text-white">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b">
+      <header className="border-b border-neon-blue/20 bg-cyber-darker">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-2">
-              <Trophy className="h-8 w-8 text-indigo-600" />
-              <h1 className="text-2xl font-bold text-gray-900">Virtual Hackathon 2025</h1>
+            <div className="flex items-center space-x-4">
+              <Sparkles className="h-8 w-8 text-neon-blue animate-glow" />
+              <h1 className="font-pixel text-xl bg-gradient-to-r from-neon-pink via-neon-blue to-neon-green bg-clip-text text-transparent">
+                PIXEL MERCH
+              </h1>
             </div>
             <nav className="flex items-center space-x-4">
-              <Link href="/privacy" className="text-gray-600 hover:text-gray-900">
-                Privacy Policy
-              </Link>
               {isConnected ? (
-                <Button variant="outline" onClick={() => disconnect()}>
+                <Button 
+                  variant="outline" 
+                  onClick={() => disconnect()}
+                  className="font-mono border-neon-blue text-neon-blue hover:bg-neon-blue/10"
+                >
                   Disconnect
                 </Button>
               ) : null}
@@ -143,136 +147,105 @@ export default function HomePage() {
 
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Hero Section */}
-        <div className="text-center mb-12">
-          <div className="flex justify-center mb-6">
-            <div className="bg-indigo-100 p-4 rounded-full">
-              <Users className="h-12 w-12 text-indigo-600" />
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Product Grid */}
+          <div className="grid grid-cols-2 gap-4">
+            {MERCH_ITEMS.map((item) => (
+              <Card 
+                key={item.id}
+                className={`bg-cyber-dark border-2 transition-all duration-300 cursor-pointer ${
+                  selectedItem.id === item.id 
+                    ? 'border-neon-blue shadow-lg shadow-neon-blue/20' 
+                    : 'border-cyber-light hover:border-neon-blue/50'
+                }`}
+                onClick={() => setSelectedItem(item)}
+              >
+                <CardHeader>
+                  <div className="text-4xl text-center mb-2">{item.image}</div>
+                  <CardTitle className="font-pixel text-sm text-center text-neon-blue">
+                    {item.name}
+                  </CardTitle>
+                  <CardDescription className="font-mono text-xs text-center text-gray-400">
+                    {item.price} ETH
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            ))}
           </div>
-          <h2 className="text-4xl font-bold text-gray-900 mb-4">Join the Future of Development</h2>
-          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            Register for our virtual hackathon using Smart Wallet Profiles. Build the next generation of onchain
-            applications and win amazing prizes!
-          </p>
-        </div>
 
-        {/* Registration Card */}
-        <Card className="max-w-2xl mx-auto">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Wallet className="h-5 w-5" />
-              <span>Event Registration</span>
-            </CardTitle>
-            <CardDescription>Registration fee: 0.01 USDC on Base Sepolia</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Data Collection Explanation */}
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <h3 className="font-semibold text-blue-900 mb-2">Data Collection</h3>
-              <p className="text-blue-800 text-sm">
-                We collect your email and address to register you for the hackathon and ship swag. Select which data
-                you'd like to share:
-              </p>
-            </div>
-
-            {/* Data Selection Checkboxes */}
-            <div className="space-y-3">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="email"
-                  checked={dataToRequest.email}
-                  onCheckedChange={(checked) => setDataToRequest((prev) => ({ ...prev, email: checked as boolean }))}
-                />
-                <label htmlFor="email" className="text-sm font-medium">
-                  Email Address (for event updates and notifications)
-                </label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="address"
-                  checked={dataToRequest.address}
-                  onCheckedChange={(checked) => setDataToRequest((prev) => ({ ...prev, address: checked as boolean }))}
-                />
-                <label htmlFor="address" className="text-sm font-medium">
-                  Physical Address (for swag shipping)
-                </label>
-              </div>
-            </div>
-
-            {/* Connection Status */}
-            {!isConnected ? (
-              <div className="text-center">
-                <Button onClick={() => connect({ connector: connectors[0] })} className="w-full" size="lg">
+          {/* Purchase Card */}
+          <Card className="bg-cyber-dark border-2 border-neon-pink/50">
+            <CardHeader>
+              <CardTitle className="font-pixel text-neon-pink">Selected Item</CardTitle>
+              <CardDescription className="font-mono">{selectedItem.description}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {!isConnected ? (
+                <Button 
+                  onClick={() => connect({ connector: connectors[0], chainId: 84532 })} 
+                  className="w-full bg-neon-blue hover:bg-neon-blue/80 text-cyber-black font-pixel"
+                >
                   <Wallet className="mr-2 h-4 w-4" />
-                  Connect Smart Wallet
+                  Connect Wallet
                 </Button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="bg-green-50 p-3 rounded-lg">
-                  <p className="text-green-800 text-sm">
-                    ✅ Wallet connected: {address?.slice(0, 6)}...{address?.slice(-4)}
-                  </p>
+              ) : (
+                <div className="space-y-4">
+                  <div className="bg-cyber-light rounded-lg p-3">
+                    <p className="font-mono text-sm text-neon-green">
+                      ✓ Wallet: {address?.slice(0, 6)}...{address?.slice(-4)}
+                    </p>
+                  </div>
+
+                  <Button 
+                    onClick={handlePurchase} 
+                    disabled={isPending} 
+                    className="w-full bg-neon-pink hover:bg-neon-pink/80 text-cyber-black font-pixel"
+                  >
+                    {isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingBag className="mr-2 h-4 w-4" />
+                        Buy Now ({selectedItem.price} ETH)
+                      </>
+                    )}
+                  </Button>
                 </div>
+              )}
 
-                <Button onClick={handleSubmit} disabled={isPending} className="w-full" size="lg">
-                  {isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Processing Registration...
-                    </>
-                  ) : (
-                    "Register for Hackathon (0.01 USDC)"
-                  )}
-                </Button>
-              </div>
-            )}
-
-            {/* Results Display */}
-            {result && (
-              <div className="mt-6">
-                {result.success ? (
-                  <Alert className="border-green-200 bg-green-50">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                    <AlertDescription className="text-green-800">
-                      <div className="space-y-2">
-                        <p className="font-semibold">Registration Successful! 🎉</p>
-                        <div className="text-sm space-y-1">
+              {/* Transaction Result */}
+              {result && (
+                <div className="mt-6">
+                  {result.success ? (
+                    <Alert className="border-neon-green bg-neon-green/10">
+                      <CheckCircle className="h-4 w-4 text-neon-green" />
+                      <AlertDescription className="font-mono text-neon-green">
+                        <div className="space-y-2">
+                          <p>Purchase successful! 🎉</p>
                           {result.email && (
-                            <p>
-                              <strong>Email:</strong> {result.email}
-                            </p>
+                            <p className="text-sm">Email: {result.email}</p>
                           )}
                           {result.address && (
-                            <p>
-                              <strong>Address:</strong> {result.address}
-                            </p>
+                            <p className="text-sm">Shipping to: {result.address}</p>
                           )}
                         </div>
-                        <p className="text-sm">Check your email for further instructions!</p>
-                      </div>
-                    </AlertDescription>
-                  </Alert>
-                ) : (
-                  <Alert variant="destructive">
-                    <XCircle className="h-4 w-4" />
-                    <AlertDescription>{result.error}</AlertDescription>
-                  </Alert>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Footer Info */}
-        <div className="text-center mt-12 text-gray-600">
-          <p className="text-sm">
-            Need Base Sepolia USDC for testing? Visit the{" "}
-            <a href="https://faucet.quicknode.com/base/sepolia" className="text-indigo-600 hover:underline">
-              Base Sepolia Faucet
-            </a>
-          </p>
+                      </AlertDescription>
+                    </Alert>
+                  ) : (
+                    <Alert className="border-neon-pink bg-neon-pink/10">
+                      <XCircle className="h-4 w-4 text-neon-pink" />
+                      <AlertDescription className="font-mono text-neon-pink">
+                        {result.error}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </main>
     </div>
